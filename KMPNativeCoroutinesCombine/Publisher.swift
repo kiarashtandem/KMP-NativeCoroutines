@@ -75,11 +75,13 @@ internal class NativeFlowSubscription<Output, Failure, Unit, S: Subscriber>: Sub
         }
         semaphore.signal()
         self.nativeFlow = nil
-        nativeCancellable = nativeFlow({ item, next, unit in
+        nativeCancellable = nativeFlow({ [weak self] item, next, unit in
+            guard let self else { return unit }
             guard let subscriber = self.subscriber else { return unit }
-            let demand = subscriber.receive(item)
             self.semaphore.wait()
             defer { self.semaphore.signal() }
+            let demand = subscriber.receive(item)
+
             self.demand -= 1
             self.demand += demand
             if (self.hasDemand) {
